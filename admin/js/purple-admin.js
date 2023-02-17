@@ -1,4 +1,41 @@
 jQuery(document).ready(function( $ ) {
+	// category upload image
+	
+		var mediaUploader;
+	
+		$('#image_upload_button').click(function(e) {
+			e.preventDefault();
+	
+			if (mediaUploader) {
+				mediaUploader.open();
+				return;
+			}
+	
+			mediaUploader = wp.media.frames.file_frame = wp.media({
+				title: 'Upload Category Image',
+				button: {
+					text: 'Choose Image'
+				},
+				multiple: false
+			});
+	
+			mediaUploader.on('select', function() {
+				var attachment = mediaUploader.state().get('selection').first().toJSON();
+				$('#image_id').val(attachment.id);
+				$('.img-art-cat-prev').attr('src', attachment.url);
+			});
+	
+			mediaUploader.open();
+		});
+	
+		$('#image_remove_button').click(function(e) {
+			e.preventDefault();
+			$('#image_id').val('');
+			$('img').attr('src', '');
+		});
+	
+	
+	// category upload image
 	jQuery(document).on('click',function(e){
 		var target = e.target
 		if(jQuery(target).hasClass('open-del-btn') || jQuery(target).hasClass('delete')){

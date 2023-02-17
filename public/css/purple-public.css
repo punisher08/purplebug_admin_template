@@ -113,3 +113,18 @@ div#sfba-form2-container {
 div#sfba-form2-container p#sfba_thanks_image {
     width: 50px;
 }
+.custom-row {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .half-col {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 0 10px;
+  }
+  
+  .custom-post-description {
+    margin-top: 10px;
+  }
+  

@@ -454,7 +454,7 @@ function library_post_type() {
 		'description'           => __( 'Post Type Description', 'text_domain' ),
 		'labels'                => $labels,
 		'supports'              => array( 'title','editor', 'author', 'thumbnail', 'excerpt','comments'),
-		'taxonomies'            => array( 'category'),
+		'taxonomies'            => array( 'article_category'),
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
@@ -473,6 +473,50 @@ function library_post_type() {
 		'menu_icon'           => 'dashicons-media-document',
 	);
 	register_post_type( 'article', $args );
+
+    // register taxonomy
+    $article_category = array(
+		'name'                       => "Category",
+		'singular_name'              => "Category",
+		'menu_name'                  => "Category",
+		'all_items'                  => 'All Items',
+		'parent_item'                => 'Parent Item',
+		'parent_item_colon'          => 'Parent Item:',
+		'new_item_name'              => 'New Item Name',
+		'add_new_item'               => 'Add New Item',
+		'edit_item'                  => 'Edit Item',
+		'update_item'                => 'Update Item',
+		'view_item'                  => 'View Item',
+		'separate_items_with_commas' => 'Separate items with commas',
+		'add_or_remove_items'        => 'Add or remove items',
+		'choose_from_most_used'      => 'Choose from the most used',
+		'popular_items'              => 'Popular Items',
+		'search_items'               => 'Search Items',
+		'not_found'                  => 'Not Found',
+		'no_terms'                   => 'No items',
+		'items_list'                 => 'Items list',
+		'items_list_navigation'      => 'Items list navigation',
+	);
+	$rewrite_article_category = array(
+		'slug'                       => 'article-category',
+		'with_front'                 => true,
+		'hierarchical'               => false,
+	);
+	$args_article_cat = array(
+		'labels'                     => $article_category,
+		'hierarchical'               => true,
+		'public'                     => false,
+		'show_ui'                    => true,
+		'show_admin_column'          => true,
+		'show_in_nav_menus'          => false,
+		'show_tagcloud'              => false,
+		'rewrite'                    => $rewrite_article_category,
+		'capability' 				 => 'manage_options',
+	);
+	register_taxonomy( 'article_category', array( 'article' ), $args_article_cat );
+ 
+
+    // register_taxonomy_for_object_type('article_category', 'article');
 
 }
 add_action( 'init', 'library_post_type', 10 );
@@ -1525,12 +1569,14 @@ function categories_widget($attr){
     ), $attr );
     $id = $term_id['term_id'];
     $categories = get_terms( array(
-        'taxonomy' => 'category',
+        'taxonomy' => 'article_category',
 		 'orderby'  => 'id',
           'order'    => 'ASC',
         'hide_empty' => false,
         'parent' => $id
     ) );
+    // 
+   
     $html = '';
 	$total_categories = count($categories);
 	$maxCol = ($total_categories % 2);
@@ -1540,15 +1586,21 @@ function categories_widget($attr){
     foreach($categories as $category){
 	
         $category_link = get_category_link($category->term_id);
+        $image_id = get_term_meta( $category->term_id, 'image_id', true );
+        $img_url = wp_get_attachment_image_url( $image_id, 'full' );
         $category_title = $category->name;
+        $description = wp_trim_words( $category->description, 10, '...' );
+                $html .= "<a href='".$category_link."'>";
                 $html .= '<div class="half-col">';
-                    // $html .= "<a href='".$category_link."'><img src=".z_taxonomy_image_url($category->term_id)." /></a>";
+                    $html .= "<a href='".$category_link."'><img src=".$img_url." /></a>";
                     $html .= "<a href='".$category_link."'><img src='' /></a>";
 						$html .= '<div class="custom-post-description">';
 							$html .= "<p>".$category_title."</p>";
+							$html .= "<p>".$description."</p>";
 							$html .= "<p class='readmorecat'><a href='".$category_link."'>Read More</a></p>"; 
 						$html .= '</div>';
                 $html .= '</div>';    
+                $html .= '</a>';    
 		if(($i % 2) == 0){
 			$html .= '</div><div class="custom-row">';
 			$i++;
@@ -1560,74 +1612,69 @@ function categories_widget($attr){
     }
     $html .= '</div>';
     return $html;
+
 }
 add_shortcode( 'category_archive_widget', 'categories_widget');
 
-function Add_metabox_Article(){
-    add_meta_box(
-		"article_cat_featured_image",
-		"Featured Image",
-		"article_cat_featured_image_callback",
-		"article",
-		"normal",
-		"low"
-	);
-}
-// add_action( 'admin_init','Add_metabox_Article');
-add_action( 'add_meta_boxes_article_category', 'Add_metabox_Article' );
 
-function custom_taxonomy() {
-    $args = array(
-        'label' => 'Article Categories',
-        'hierarchical' => true,
-        'rewrite' => array( 'slug' => 'article-category' ),
-    );
-    register_taxonomy( 'article_category', array( 'article' ), $args );
-}
-add_action( 'init', 'custom_taxonomy' );
+
 function article_cat_featured_image_callback(){
     echo '<input type="text" name="article_cat_featured_image" id="article_cat_featured_image">';
 
 }
-function add_custom_post_type_to_taxonomy() {
-    register_taxonomy_for_object_type('article_category', 'article');
-  }
-  add_action('init', 'add_custom_post_type_to_taxonomy');
 
-// Add the extra field to the category add form
-function add_category_extra_field() {
-    ?>
-    <div class="form-field">
-        <label for="extra_field">Extra Field</label>
-        <input type="text" name="extra_field" id="extra_field">
-        <p class="description">Enter a value for the extra field.</p>
-    </div>
-    <?php
-}
-add_action( 'article_category_add_form_fields', 'add_category_extra_field' );
-
-// Add the extra field to the category edit form
-function edit_category_extra_field( $term ) {
-    $extra_field_value = get_term_meta( $term->term_id, 'extra_field', true );
+// Add the image upload field to the category edit form
+function edit_category_image_field( $term ) {
+    $image_id = get_term_meta( $term->term_id, 'image_id', true );
     ?>
     <tr class="form-field">
         <th scope="row" valign="top">
-            <label for="extra_field">Extra Field</label>
+            <label for="image_upload">Category Image</label>
         </th>
         <td>
-            <input type="text" name="extra_field" id="extra_field" value="<?php echo esc_attr( $extra_field_value ); ?>">
-            <p class="description">Enter a value for the extra field.</p>
+            <?php
+            $cat_img = plugin_dir_url(__FILE__). 'assets/images/default.png';
+            $image_url = wp_get_attachment_url( $image_id );
+            if ( $image_url ) {
+                ?>
+                <img src="<?php echo esc_url( $image_url ); ?>" alt="" style="max-width:100%;height:auto;" class="img-art-cat-prev">
+            <?php }else{
+               
+            } 
+            echo  '<img src="'.$cat_img.'" alt="" style="max-width:100%;height:auto;" class="img-art-cat-prev">';
+            ?>
+            <br>
+            <input type="button" class="button" name="image_upload_button" id="image_upload_button" value="Upload Image">
+            <input type="hidden" name="image_id" id="image_id" value="<?php echo esc_attr( $image_id ); ?>">
+            <input type="button" class="button" name="image_remove_button" id="image_remove_button" value="Remove Image">
+            <p class="description">Upload a category image.</p>
         </td>
     </tr>
     <?php
 }
-add_action( 'article_category_edit_form_fields', 'edit_category_extra_field' );
+add_action( 'article_category_edit_form_fields', 'edit_category_image_field' );
+add_action( 'article_category_add_form_fields', 'edit_category_image_field' );
 
-// Save the extra field value when a category is saved
-function save_category_extra_field( $term_id ) {
-    if ( isset( $_POST['extra_field'] ) ) {
-        update_term_meta( $term_id, 'extra_field', sanitize_text_field( $_POST['extra_field'] ) );
+// Enqueue necessary scripts for the image upload field
+function category_image_upload_scripts() {
+    wp_enqueue_media();
+    wp_enqueue_script( 'category-image-upload', get_stylesheet_directory_uri() . '/js/category-image-upload.js', array( 'jquery' ), '1.0', true );
+}
+add_action( 'admin_enqueue_scripts', 'category_image_upload_scripts' );
+
+
+function load_template_styles() {
+    wp_enqueue_media();
+    wp_enqueue_script( 'category-image-upload', get_stylesheet_directory_uri() . '/js/category-image-upload.js', array( 'jquery' ), '1.0', true );
+}
+add_action( 'wp_enqueue_scripts', 'load_template_styles' );
+
+// Save the image ID when a category is saved
+function save_category_image_field( $term_id ) {
+    if ( isset( $_POST['image_id'] ) ) {
+        update_term_meta( $term_id, 'image_id', absint( $_POST['image_id'] ) );
     }
 }
-add_action( 'edited_article_category', 'save_category_extra_field' );
-add_action( 'create_article_category', 'save_category_extra_field' );
+add_action( 'edited_article_category', 'save_category_image_field' );
+add_action( 'create_article_category', 'save_category_image_field' );
+
